@@ -2,5 +2,13 @@
   "name": "Phish Detector",
   "description": "Detect and forward test phishing emails back to InfoSec, exponentially",
   "repository": "https://github.com/shopeonarope/phishthis",
-  "stack": "container"
+  "stack": "container",
+  "formation": {
+    "worker": {
+      "quantity": 1
+    },
+    "web": {
+      "quantity": 0
+    }
+  }
 }
