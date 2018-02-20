@@ -206,9 +206,9 @@ class GmailIdleNotifier:
                         fakeAddr = line.split("From:",1)[1].rstrip()
                     line = p.stdout.readline()
                 if(imAPhish):
-                    print "A new phishing email has been detected from: " + fakeAddr + " @ " + time.strftime("%m-%d-%Y %H:%M:%S")
+                    print "A new phishing email has been detected from: " + fakeAddr + " @ " + time.strftime("%m-%d-%Y %H:%M:%S %Z")
                 else:
-                    print "A non-phish event @ " + time.strftime("%m-%d-%Y %H:%M:%S")
+                    print "A non-phish event @ " + time.strftime("%m-%d-%Y %H:%M:%S %Z")
                     break
             # Extract the email information
             elif(imAPhish):         
