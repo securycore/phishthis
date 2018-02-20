@@ -17,13 +17,5 @@
       "value": "phishtest@mailinator.com",
       "required": true
     }
-  },
-  "formation": {
-    "worker": {
-      "quantity": 1
-    },
-    "web": {
-      "quantity": 0
-    }
   }
 }
