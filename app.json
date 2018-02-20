@@ -4,11 +4,10 @@
   "repository": "https://github.com/shopeonarope/phishthis",
   "stack": "container",
   "formation": {
-    "worker": {
-      "quantity": 1
-    },
-    "web": {
-      "quantity": 0
-    }
+   "type": "array",
+   "phish-farm": [
+      { "process": "worker", "quantity": 1 },
+      { "process": "web", "quantity": 0 }
+    ]
   }
 }
