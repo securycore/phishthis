@@ -6,9 +6,6 @@
   "formation": {
     "worker": {
       "quantity": 1
-    },
-    "web": {
-      "quantity": 0
     }
   },
   "env": {
