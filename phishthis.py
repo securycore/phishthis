@@ -26,6 +26,7 @@ import cgi
 import email
 import getopt
 import getpass
+import hashlib
 import os
 import signal
 import smtplib
@@ -50,6 +51,12 @@ cmd = [openssl, "s_client", "-connect", "imap.gmail.com:993", "-crlf"]
 timeOutInterval = 900
 # Previous email's ID
 previousId = ""
+
+# API key from https://keyvalue.immanuel.co/
+# used as a datastore for the exponential forwarding
+kvApiKey = "drrgmto0"
+datastoreKey = ""
+kvUrlBase = "https://keyvalue.immanuel.co/api/KeyVal"
 
 class GmailIdleNotifier:
     def __init__(self):
@@ -122,7 +129,22 @@ class GmailIdleNotifier:
             
             # Kill the subprocess
             os.kill(p.pid, signal.SIGTERM)
-            
+
+    def fetchCurrentFwdCount(self):
+        global kvUrlBase, kvApiKey, datastoreKey
+        get = "GetValue"
+        post = "UpdateValue"
+        default = "0"
+
+        return int(urllib2.urlopen('/'.join([kvUrlBase, get, kvApiKey, datastoreKey])).read().replace('"', '') \
+        or urllib2.urlopen('/'.join([kvUrlBase, post, kvApiKey, datastoreKey, default]), data="").read().replace('true', default))
+
+    def incrementFwdCount(self):
+        global kvUrlBase, kvApiKey, datastoreKey
+        put = "ActOnValue"
+        increment = "Increment"
+
+        urllib2.urlopen('/'.join([kvUrlBase, put, kvApiKey, datastoreKey, increment]), data="")
     
     def start(self):
         """Log into the Google IMAP server and enable IDLE mode."""
@@ -271,8 +293,9 @@ class GmailIdleNotifier:
     def attachFwdHeaderToBody(self, msg):
         header = self.buildFwdMsgHeader(msg, msg.get_content_subtype())
         return base64.b64encode(header + msg.get_payload(decode=True)) if msg['Content-Transfer-Encoding'] == 'base64' else header + msg.get_payload()
+
     def buildFwdMsgHeader(self, msg, contentType):
-        """Add standard forwarded msg headers and add Fwd: to subject"""
+        """Build standard forwarded msg headers and add Fwd: to subject"""
         s = '<br>' if contentType == 'html' else '\n'
         toAddr = fromAddr = date = subject = ''
         fwdHeader = "---------- Forwarded message ----------"
@@ -286,15 +309,21 @@ class GmailIdleNotifier:
 
     def fwdToSuspicious(self, msg, address):
         """Forward phishing email to provided address"""
-        print "Forwarding to: " + address
         global username, password
+        count = 2**self.fetchCurrentFwdCount()
+        print "Forwarding to: " + address + ", " + str(count) + " times"
+
         server = smtplib.SMTP('smtp.gmail.com:587')
         server.ehlo()
         server.starttls()
         server.login(username, password)
-        server.sendmail(username, address, msg.as_string())
+        for _ in range(count):
+          server.sendmail(username, address, msg.as_string())
+          # Don't try to send the email TOO fast
+          time.sleep(1)
         server.quit()
-        
+        self.incrementFwdCount()
+
 def usage():
     """Prints the usage."""
     print __doc__
@@ -302,7 +331,7 @@ def usage():
 def main(argv):
     """Parses the arguments and starts the program."""
     
-    global username, password, openssl, forwardAddr
+    global username, password, openssl, forwardAddr, datastoreKey
     
     try:
         opts, args = getopt.getopt(argv, "hl:u:p:f:", ["help","location=","username=","password=","forward="])
@@ -324,6 +353,8 @@ def main(argv):
             
     print "Starting Phishing Detector..."
     phisher = GmailIdleNotifier()
+    # Create user unique key to store/retrieve count values
+    datastoreKey = hashlib.sha256(username + password).hexdigest()
     try:
         phisher.start()
     except KeyboardInterrupt:
